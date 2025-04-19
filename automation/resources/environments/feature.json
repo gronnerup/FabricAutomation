@@ -1,0 +1,38 @@
+{
+    "feature_name" : "*{feature_name}-{layer_name}",
+    "capacity_name": "MyCapacity",
+    "git_settings": {
+        "gitProviderDetails": {
+            "gitProviderType": "GitHub",
+            "ownerName": "MyGitHubProfile",
+            "repositoryName": "MyGitHubRepo"
+        },
+        "myGitCredentials": {
+            "source": "ConfiguredConnection",
+            "connectionId": "00000000-0000-0000-0000-000000000000"
+        }
+    },
+    "permissions": {
+        "admin": [
+            {"type": "Group", "id": "00000000-0000-0000-0000-000000000000"}
+        ],
+        "contributor": [
+            {"type": "User", "id": "00000000-0000-0000-0000-000000000000"}
+        ]
+    },
+    "layers": {
+        "Prepare": {
+            "spark_settings": {
+                "pool": {
+                    "starterPool": {
+                        "maxExecutors": 1,
+                        "maxNodeCount": 1
+                    }
+                }
+            },
+            "git_directoryName": "solution/prepare"
+        },
+        "Ingest": { "git_directoryName": "solution/prepare" },
+        "Orchestrate": { "git_directoryName": "solution/orchestrate" }
+    }
+}

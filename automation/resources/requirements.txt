@@ -1,0 +1,2 @@
+requests
+ms-fabric-cli
