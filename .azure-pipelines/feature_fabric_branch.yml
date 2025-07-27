@@ -1,0 +1,33 @@
+pr: none
+
+trigger: 
+  branches:
+    include:
+    - feature/*
+
+jobs:
+- job: create_feature
+  displayName: 'Create Fabric feature workspaces'
+  pool:
+    vmImage: 'windows-latest'
+
+  variables:
+    - group: Fabric_Automation
+
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install requests
+        pip install ms-fabric-cli==1.0.0
+      displayName: 'Install Python requirements'
+
+    - script: python -u automation/scripts/fabric_feature_maintainance.py
+      displayName: 'Run Fabric feature maintenance script'
+      env:
+        FAB_TENANT_ID: $(SPN_TENANT_ID)
+        FAB_SPN_CLIENT_ID: $(SPN_CLIENT_ID)
+        FAB_SPN_CLIENT_SECRET: $(SPN_CLIENT_SECRET)

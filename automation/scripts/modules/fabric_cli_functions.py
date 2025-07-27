@@ -1,6 +1,13 @@
-import subprocess, json, time
+import subprocess, json, time, uuid
 
 EXIT_ON_ERROR = True
+
+def is_guid(value: str) -> bool:
+    try:
+        uuid_obj = uuid.UUID(value)
+        return str(uuid_obj) == value.lower()
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 def run_command(command: str) -> str:
     try:
@@ -18,11 +25,13 @@ def run_command(command: str) -> str:
             raise
         return e.stderr.strip()
     
-
-def connection_exists(connection_id):
-    connection_url = f"connections/{connection_id}"
-    response = run_command(f"api -X get {connection_url}")
-    return json.loads(response).get("status_code", 404) == 200
+def connection_exists(connection_identifier):
+    if is_guid(connection_identifier): 
+        connection_url = f"connections/{connection_identifier}"
+        response = run_command(f"api -X get {connection_url}")
+        return json.loads(response).get("status_code", 404) == 200
+    else:
+        return True if run_command(f"exists .connections/{connection_identifier}.Connection").replace("*", "").strip().lower() == "true" else False
 
 def get_git_connection(workspace_id):
     git_url = f"workspaces/{workspace_id}/git/connection"
@@ -97,5 +106,3 @@ def poll_operation_status(operation_id):
             return None
     
     return None  # Operation timed out or failed
-
-    
