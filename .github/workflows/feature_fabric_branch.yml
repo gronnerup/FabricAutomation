@@ -27,4 +27,4 @@ jobs:
           pip install -r automation/resources/requirements.txt
 
       - name: Run Fabric feature maintenance script
-        run: python automation/scripts/fabric_feature_maintainance.py
+        run: python -u automation/scripts/fabric_feature_maintainance.py

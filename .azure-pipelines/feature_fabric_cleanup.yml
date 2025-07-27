@@ -1,0 +1,77 @@
+pr:
+- none
+
+trigger: 
+  branches:
+    include:
+    - main
+
+jobs:
+- job: cleanup_feature
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+  displayName: 'Cleanup Fabric feature workspaces'
+  pool:
+    vmImage: 'windows-latest'
+
+  variables:
+    - group: Fabric_Automation
+
+  steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: 'env | sort'
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install requests
+        pip install ms-fabric-cli==1.0.0
+      displayName: 'Install Python requirements'
+    
+    - task: Bash@3
+      displayName: 'Get sourceRefName from pullrequestquery endpoint'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "##[group]Get PR sourceRefName from commit ID using pullrequestquery"
+
+          ORG_URL="${SYSTEM_COLLECTIONURI}"
+          PROJECT="${SYSTEM_TEAMPROJECT}"
+          REPO_NAME="${BUILD_REPOSITORY_NAME}"
+          COMMIT_ID="${BUILD_SOURCEVERSION}"
+
+          echo "Looking for PR with lastMergeCommit: $COMMIT_ID"
+
+          API_URL="${ORG_URL}${PROJECT}/_apis/git/repositories/${REPO_NAME}/pullrequestquery?api-version=7.0"
+          JSON_BODY=$(jq -n --arg commit "$COMMIT_ID" '{ queries: [ { items: [$commit], type: "lastMergeCommit" } ] }')
+
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SYSTEM_ACCESSTOKEN" \
+            -d "$JSON_BODY" \
+            "$API_URL")
+
+          # Extract the sourceRefName from the results
+          SOURCE_REF=$(echo "$RESPONSE" | jq -r --arg commit "$COMMIT_ID" '.results[0][$commit][0].sourceRefName')
+
+          if [ "$SOURCE_REF" == "null" ] || [ -z "$SOURCE_REF" ]; then
+            echo "No sourceRefName found for commit $COMMIT_ID"
+          else
+            echo "Found sourceRefName: $SOURCE_REF"
+            echo "##vso[task.setvariable variable=SourceRefName]$SOURCE_REF"
+          fi
+
+          echo "##[endgroup]"
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+    - script: python -u automation/scripts/fabric_feature_maintainance.py --action delete --branch_name $(SourceRefName)
+      displayName: 'Run Fabric feature maintenance script'
+      env:
+        FAB_TENANT_ID: $(SPN_TENANT_ID)
+        FAB_SPN_CLIENT_ID: $(SPN_CLIENT_ID)
+        FAB_SPN_CLIENT_SECRET: $(SPN_CLIENT_SECRET)

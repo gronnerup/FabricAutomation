@@ -31,6 +31,6 @@ jobs:
 
       - name: Run Fabric feature maintenance script
         run: |
-          python automation/scripts/fabric_feature_maintainance.py \
+          python -u automation/scripts/fabric_feature_maintainance.py \
             --branch_name ${{ github.head_ref }} \
             --action delete
