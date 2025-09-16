@@ -1,0 +1,33 @@
+trigger:
+  branches:
+    include:
+      - releases/release*
+
+pr: none  # Optional: disable PR trigger if not needed
+
+# Allow manual execution
+stages:
+- stage: Build
+  displayName: 'Build Solution'
+  jobs:
+  - template: _template_build_solution.yml
+    parameters:
+      environments: dev,tst,prd
+
+- stage: ReleaseTst
+  displayName: 'Release to Test'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - template: _template_release_solution.yml
+    parameters:
+      environment: tst
+
+- stage: ReleasePrd
+  displayName: 'Release to Production'
+  dependsOn: ReleaseTst
+  condition: succeeded()
+  jobs:
+  - template: _template_release_solution.yml
+    parameters:
+      environment: prd

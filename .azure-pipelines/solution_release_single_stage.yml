@@ -1,0 +1,25 @@
+parameters:
+  - name: environment
+    displayName: Target Environment
+    type: string
+    default: 'tst'
+
+trigger: none
+pr: none 
+
+stages:
+- stage: Build
+  displayName: 'Build Solution'
+  jobs:
+  - template: _template_build_solution.yml
+    parameters:
+      environments: dev,tst,prd
+
+- stage: Release
+  displayName: 'Release to Test'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - template: _template_release_solution.yml
+    parameters:
+      environment: ${{ parameters.environment }}

@@ -1,0 +1,56 @@
+{
+    "name": "SolutionName - {layer} [{environment}]",
+    "generic": {
+        "capacity_name": "MyCapacity",
+        "permissions": {
+            "Admin": [
+                {"type": "Group", "id": "00000000-0000-0000-0000-000000000000"}
+            ]
+        },
+        "fabric_connections":  [
+            {
+                "name": "GenericConnectionName-DataPipeline",
+		        "type": "FabricDataPipelines"
+            },
+            {
+                "name": "GenericConnectionName-Database",
+		        "type": "FabricSql"
+            }
+        ]
+    },
+    "layers" : 
+    {
+        "Core": { 
+            "items": {
+                "SQLDatabase": [
+                    {
+                        "item_name": "Metadata",
+                        "skip_item_creation": true,
+                        "connection_name": "ConnectionName-MetadataDB [{environment}]"
+                    }
+                ]
+            }
+        },
+        "Store": { 
+            "items": {
+                "Lakehouse": [
+                    {
+                        "item_name": "Curated",
+                        "skip_item_creation": true, 
+                        "connection_name": "ConnectionName-Curated [{environment}]"
+                    }
+                ]
+            }
+        },
+         "Orchestrate": { 
+            "create_workspace_identity": true
+        },
+        "Ingest": { 
+            "create_workspace_identity": true
+        },
+        "Prepare": { },
+        "Model": { },
+        "Present": { }
+    }
+}
+

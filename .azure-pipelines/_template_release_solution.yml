@@ -1,0 +1,90 @@
+parameters:
+  - name: environment
+    type: string
+    default: ''
+
+jobs:
+- job: release_solution
+  displayName: 'Release to ${{ parameters.environment }}'
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  variables:
+  - name: PYTHONIOENCODING
+    value: utf-8
+  - name: PYTHONUNBUFFERED
+    value: 1
+  - name: DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION
+    value: true
+  - name: VSO_FORCE_UTF8_OUTPUT
+    value: true
+  - group: Fabric_Automation
+
+  steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Automation artifacts'
+      inputs:
+        artifact: automation
+        path: $(Pipeline.Workspace)/automation
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Solution artifacts'
+      inputs:
+        artifact: solution
+        path: $(Pipeline.Workspace)/solution
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r automation/resources/requirements.txt
+      displayName: 'Install Python dependencies'
+
+    - script: python -u automation/scripts/fabric_release.py --environment ${{ parameters.environment }} --repo_path "$(Pipeline.Workspace)/solution"
+      displayName: 'Run Fabric release script'
+      env:
+        TENANT_ID: $(SPN_TENANT_ID)
+        CLIENT_ID: $(SPN_CLIENT_ID)
+        CLIENT_SECRET: $(SPN_CLIENT_SECRET)
+
+    - task: Bash@3
+      name: generate_connectionstring
+      displayName: 'Generate SQL connection string'
+      inputs:
+        targetType: 'inline'
+        script: |
+          python automation/scripts/generate_connection_string.py \
+            --environment "${{ parameters.environment }}" \
+            --layer "Core" \
+            --database "Metadata" \
+            --output_file conn.txt
+
+          CONNECTION_STRING=$(cat conn.txt)
+          echo "##vso[task.setvariable variable=connection_string]$CONNECTION_STRING"
+      env:
+        TENANT_ID: $(SPN_TENANT_ID)
+        CLIENT_ID: $(SPN_CLIENT_ID)
+        CLIENT_SECRET: $(SPN_CLIENT_SECRET)
+
+    - task: Bash@3
+      displayName: 'Install sqlpackage'
+      inputs:
+        targetType: 'inline'
+        script: |
+          wget https://aka.ms/sqlpackage-linux -O sqlpackage.zip
+          unzip sqlpackage.zip -d sqlpackage
+          chmod +x sqlpackage/sqlpackage
+
+    - task: Bash@3
+      displayName: 'Deploy database'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "$(connection_string)"
+
+          ./sqlpackage/sqlpackage /Action:Publish \
+            /SourceFile:"$(Pipeline.Workspace)/solution/core/Metadata.SQLDatabase/bin/Debug/Metadata.dacpac" \
+            /TargetConnectionString:"$(connection_string)" \
+            /p:DropObjectsNotInSource=false /p:AllowIncompatiblePlatform=True /p:ExcludeObjectType=DatabaseRoles /p:ExcludeObjectType=Users

@@ -1,5 +1,4 @@
-pr:
-- none
+pr: none
 
 trigger: 
   branches:
@@ -11,27 +10,20 @@ jobs:
   condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
   displayName: 'Cleanup Fabric feature workspaces'
   pool:
-    vmImage: 'windows-latest'
+    vmImage: 'ubuntu-latest'
 
   variables:
-    - group: Fabric_Automation
+  - name: PYTHONIOENCODING
+    value: utf-8
+  - name: PYTHONUNBUFFERED
+    value: 1
+  - name: DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION
+    value: true
+  - name: VSO_FORCE_UTF8_OUTPUT
+    value: true
+  - group: Fabric_Automation
 
   steps:
-    - task: Bash@3
-      inputs:
-        targetType: 'inline'
-        script: 'env | sort'
-
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.12'
-
-    - script: |
-        python -m pip install --upgrade pip
-        pip install requests
-        pip install ms-fabric-cli==1.0.0
-      displayName: 'Install Python requirements'
-    
     - task: Bash@3
       displayName: 'Get sourceRefName from pullrequestquery endpoint'
       inputs:
@@ -69,8 +61,21 @@ jobs:
       env:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
+    - task: UsePythonVersion@0
+      condition: and(succeeded(), ne(variables['SourceRefName'], '')) 
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install Python dependencies'
+      condition: and(succeeded(), ne(variables['SourceRefName'], ''))
+      workingDirectory: '$(Build.SourcesDirectory)/automation/resources'
+
     - script: python -u automation/scripts/fabric_feature_maintainance.py --action delete --branch_name $(SourceRefName)
       displayName: 'Run Fabric feature maintenance script'
+      condition: and(succeeded(), ne(variables['SourceRefName'], ''))
       env:
         FAB_TENANT_ID: $(SPN_TENANT_ID)
         FAB_SPN_CLIENT_ID: $(SPN_CLIENT_ID)

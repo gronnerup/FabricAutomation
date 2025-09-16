@@ -1,0 +1,115 @@
+trigger: none  # Manual only
+
+parameters:
+  - name: base_branch
+    displayName: Base branch to merge into
+    type: string
+    default: 'main'
+
+  - name: environment
+    displayName: Deployment environment
+    type: string
+    default: 'tst'
+
+stages:
+- stage: OctopusMerge
+  displayName: Octopus Merge Stage
+  jobs:
+  - job: OctopusMerge
+    displayName: Perform Octopus Merge
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    - script: |
+        git config user.name "PeerInsights Automation"
+        git config user.email "peerinsights@emono.dk"
+      displayName: Set up Git
+
+    - task: Bash@3
+      name: OctoMerge
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      inputs:
+        targetType: inline
+        script: |
+          BASE_BRANCH='${{ parameters.base_branch }}'
+          ENVIRONMENT='${{ parameters.environment }}'
+          OCTO_BRANCH="octopus-merge-$(date +%Y%m%d-%H%M%S)"
+          echo "##vso[task.setvariable variable=OCTO_BRANCH]$OCTO_BRANCH"
+
+          # Set up Git user
+          git config user.name "PeerInsights Automation"
+          git config user.email "peerinsights@emono.dk"
+
+          # ✅ Configure Git to use the Azure DevOps access token
+          git config --global http.extraheader "Authorization: Bearer $SYSTEM_ACCESSTOKEN"
+
+          git checkout $BASE_BRANCH
+          git pull origin $BASE_BRANCH
+          git checkout -b $OCTO_BRANCH
+
+          # Get open PRs targeting BASE_BRANCH with source branch matching feature/*
+          echo "Fetching open PRs into $BASE_BRANCH from feature/*..."
+
+          AZDO_ORG_URL="$SYSTEM_COLLECTIONURI"
+          PROJECT="$SYSTEM_TEAMPROJECT"
+          REPO_ID="$BUILD_REPOSITORY_ID"
+
+          PRS=$(curl -s -u :$SYSTEM_ACCESSTOKEN \
+            "${AZDO_ORG_URL}${PROJECT}/_apis/git/pullrequests?searchCriteria.targetRefName=refs/heads/$BASE_BRANCH&searchCriteria.status=active&api-version=7.1-preview.1" \
+            | jq -r '.value[] | select(.sourceRefName | startswith("refs/heads/feature/")) | .sourceRefName' \
+            | sed 's#refs/heads/##')
+
+          if [[ -z "$PRS" ]]; then
+            echo "No open feature/* PRs found into $BASE_BRANCH. Exiting..."
+            exit 0
+          fi
+
+          echo "Found the following PR branches:"
+          echo "$PRS"
+
+          MERGE_ARGS=""
+          for BRANCH in $PRS; do
+            git fetch origin "$BRANCH"
+            MERGE_ARGS="$MERGE_ARGS origin/$BRANCH"
+          done
+
+          echo "Performing octopus merge..."
+          git merge --no-ff -m "Octopus merge of feature branches: $PRS" $MERGE_ARGS
+
+          git push origin "$OCTO_BRANCH"
+
+    - task: Bash@3
+      displayName: Trigger Deployment Pipeline
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      inputs:
+        targetType: inline
+        script: |
+          echo "Triggering release pipeline for branch: $(OCTO_BRANCH), environment: ${{ parameters.environment }}"
+
+          # Use numeric pipeline ID — find it in Azure DevOps UI under Pipelines
+          PIPELINE_ID=25
+
+          API_URL="${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECT}/_apis/pipelines/${PIPELINE_ID}/runs?api-version=7.1-preview.1"
+
+          curl -s -u :$SYSTEM_ACCESSTOKEN \
+            -H "Content-Type: application/json" \
+            -X POST \
+            -d '{
+              "resources": {
+                "repositories": {
+                  "self": {
+                    "refName": "refs/heads/'"$(OCTO_BRANCH)"'"
+                  }
+                }
+              },
+              "templateParameters": {
+                "environment": "'"${{ parameters.environment }}"'"
+              }
+            }' \
+            "$API_URL"

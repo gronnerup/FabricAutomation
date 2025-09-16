@@ -1,0 +1,23 @@
+name: Fabric Solution Release - Single Stage
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'test'
+
+jobs:
+  build:
+    name: Build solution
+    uses: ./.github/workflows/_template_build_solution.yml
+    secrets: inherit
+
+  release-stage:
+    name: Release to stage
+    needs: build
+    uses: ./.github/workflows/_template_release_solution.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit

@@ -1,11 +1,13 @@
-name: Fabric Feature - Create
+name: Fabric Feature - Commit
 
-on: create
+on:
+  push:
+    branches:
+      - 'feature/**'
 
 jobs:
-  create-feature:
-    name: Create Fabric Feature Workspaces
-    if: ${{ contains(github.ref, 'refs/heads/feature/') }}
+  cleanup-feature:
+    name: Update Fabric Feature Workspaces based on commit
     runs-on: ubuntu-latest
 
     env:
@@ -16,7 +18,8 @@ jobs:
       TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
       CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
       CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}
-
+    
+    if: github.event.created == false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,4 +35,7 @@ jobs:
           pip install -r automation/resources/requirements.txt
 
       - name: Run Fabric feature maintenance script
-        run: python -u automation/scripts/fabric_feature_maintainance.py
+        run: |
+          python -u automation/scripts/fabric_feature_maintainance.py \
+            --branch_name ${{ github.ref_name }} \
+            --action update

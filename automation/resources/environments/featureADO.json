@@ -2,14 +2,15 @@
     "feature_name" : "*{feature_name}-{layer_name}",
     "capacity_name": "MyCapacity",
     "git_settings": {
-        "gitProviderDetails": {
-            "gitProviderType": "GitHub",
-            "ownerName": "MyGitHubProfile",
-            "repositoryName": "MyGitHubRepo"
+         "gitProviderDetails": {
+            "gitProviderType": "AzureDevOps",
+            "organizationName": "MyAzureDevOpsOrg",
+            "projectName": "MyAzureDevOpsProject",
+            "repositoryName": "MyAzureDevOpsRepository"
         },
-        "myGitCredentials": {
+        "myGitCredentials" : {
             "source": "ConfiguredConnection",
-            "connection_name": "MyGitConnectionName"
+            "connection_name" : "MyGitConnectionName-ADO"
         }
     },
     "permissions": {

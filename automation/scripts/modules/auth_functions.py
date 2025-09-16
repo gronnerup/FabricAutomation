@@ -29,7 +29,7 @@ def get_environment_credentials(environment: str, folder_path: str):
     Returns:
         dict or None: A dictionary containing the credentials if found, otherwise None.
     """
-    print(os.path.join(os.path.dirname(__file__), f'../../credentials/credentials.{environment}.json'))
+    
     if os.path.exists(os.path.join(os.path.dirname(__file__), f'../../credentials/credentials.{environment}.json')):
         credentials = get_credentials_from_file(os.path.join(os.path.dirname(__file__), f'../../credentials/credentials.{environment}.json'))
     elif os.path.exists(os.path.join(os.path.dirname(__file__), f'../../credentials/credentials.json')):

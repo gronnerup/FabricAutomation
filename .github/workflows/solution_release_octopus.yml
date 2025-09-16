@@ -1,0 +1,80 @@
+name: Fabric Solution Release - Octopus Merge
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: 'Base branch to merge into (defaults: main)'
+        required: true
+        default: 'main'
+      environment:
+        description: 'Deployment environment (defaults: tst)'
+        required: true
+        default: 'tst'
+
+jobs:
+  octopus-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Git
+      run: |
+        git config user.name "PeerInsights Automation"
+        git config user.email "peerinsights@emono.dk"
+
+    - name: Create Octopus Merge Branch
+      id: octomerge
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        BASE_BRANCH="${{ github.event.inputs.base-branch }}"
+        OCTO_BRANCH="octopus-merge-$(date +%Y%m%d-%H%M%S)"
+
+        echo "octo_branch=$OCTO_BRANCH" >> "$GITHUB_OUTPUT"
+
+        git checkout $BASE_BRANCH
+        git pull origin $BASE_BRANCH
+        git checkout -b $OCTO_BRANCH
+
+        PR_BRANCHES=$(gh pr list --state open --base "$BASE_BRANCH" --json headRefName --jq '.[].headRefName' | grep '^feature/' || true)
+
+        if [[ -z "$PR_BRANCHES" ]]; then
+          echo "No open PRs from feature/* branches into $BASE_BRANCH. Exiting..."
+          exit 0
+        fi
+
+        echo "Feature branches with open PRs:"
+        echo "$PR_BRANCHES"
+
+        # Do a single octopus-style merge with all branches
+        MERGE_ARGS=""
+        for BRANCH in $PR_BRANCHES; do
+          git fetch origin "$BRANCH"
+          MERGE_ARGS="$MERGE_ARGS origin/$BRANCH"
+        done
+
+        echo "Performing octopus merge..."
+        git merge --no-ff -m "Octopus merge of feature branches: $PR_BRANCHES" $MERGE_ARGS
+
+        # Push the merged result
+        git push origin "$OCTO_BRANCH"
+
+    - name: Trigger Deployment on Octopus Branch
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        OCTO_BRANCH="${{ steps.octomerge.outputs.octo_branch }}"
+        echo "Triggering deploy workflow on branch $OCTO_BRANCH..."
+
+        gh workflow run solution_release_single_stage.yml \
+          --ref "$OCTO_BRANCH" \
+          -f environment="${{ github.event.inputs.environment }}"

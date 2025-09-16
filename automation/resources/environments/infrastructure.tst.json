@@ -1,0 +1,48 @@
+{
+    "generic": {
+        "merge_type": 2,
+        "environment_name": "tst",
+        "permissions": {
+            "Admin": [
+                {"type": "Group", "id": "00000000-0000-0000-0000-000000000000"}
+            ]
+         }
+    },
+    "layers" : 
+    {
+        "merge_type": 2,
+        "Core": { 
+            "items": {
+                "SQLDatabase": [
+                    {
+                        "item_name": "Metadata",
+                        "skip_item_creation": false
+                    }
+                ]
+            }
+        },
+        "Store": { 
+            "items": {
+                "Lakehouse": [
+                    {
+                        "item_name": "Landing",
+                        "skip_item_creation": false
+                    },
+                    {
+                        "item_name": "Base",
+                        "skip_item_creation": false
+                    },
+                    {
+                        "item_name": "Curated",
+                        "skip_item_creation": false
+                    }
+                ]
+            }
+        },
+        "Prepare": { },
+        "Ingest": { },
+        "Orchestrate": { },
+        "Model": { },
+        "Present": { }
+    }
+}

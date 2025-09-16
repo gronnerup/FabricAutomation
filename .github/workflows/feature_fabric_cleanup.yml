@@ -1,4 +1,4 @@
-name: Cleanup Fabric feature workspaces on merge to main
+name: Fabric Feature - Cleanup
 
 on:
   pull_request:
@@ -8,9 +8,14 @@ on:
 
 jobs:
   cleanup-feature:
+    name: Cleanup Fabric Feature Workspaces
     runs-on: ubuntu-latest
 
     env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUNBUFFERED: 1
+      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+      VSO_FORCE_UTF8_OUTPUT: true'
       TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
       CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
       CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}

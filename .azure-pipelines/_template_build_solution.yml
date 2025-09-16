@@ -1,0 +1,58 @@
+parameters:
+  - name: environments
+    type: string
+    default: 'dev,tst,prd'
+
+jobs:
+- job: build_solution
+  displayName: 'Build Fabric Solution'
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  variables:
+  - name: PYTHONIOENCODING
+    value: utf-8
+  - name: PYTHONUNBUFFERED
+    value: 1
+  - name: DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION
+    value: true
+  - name: VSO_FORCE_UTF8_OUTPUT
+    value: true
+  - group: Fabric_Automation
+
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r automation/resources/requirements.txt
+      displayName: 'Install Python dependencies'
+
+    - script: python -u automation/scripts/utils_build_parameter_file.py --environments ${{ parameters.environments }}
+      displayName: 'Build parameter files'
+      env:
+        TENANT_ID: $(SPN_TENANT_ID)
+        CLIENT_ID: $(SPN_CLIENT_ID)
+        CLIENT_SECRET: $(SPN_CLIENT_SECRET)
+
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.0.x'
+
+    - script: dotnet build "solution/core/Metadata.SQLDatabase/Metadata.sqlproj" /p:DSP=Microsoft.Data.Tools.Schema.Sql.SqlDbFabricDatabaseSchemaProvider
+      displayName: 'Build Metadata .dacpac'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'solution'
+        ArtifactName: 'solution'
+        publishLocation: 'Container'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'automation'
+        ArtifactName: 'automation'
+        publishLocation: 'Container'

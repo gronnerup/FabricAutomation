@@ -1,0 +1,31 @@
+name: Fabric Solution Release - Multi-stage (tst -> prd)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'releases/release*'
+
+jobs:
+  build:
+    name: Build solution
+    uses: ./.github/workflows/_template_build_solution.yml
+    with:
+      environments: dev,tst,prd
+    secrets: inherit
+
+  release-tst:
+    name: Release to Test
+    needs: build
+    uses: ./.github/workflows/_template_release_solution.yml
+    with:
+      environment: tst
+    secrets: inherit
+
+  release-prd:
+    name: Release to Production
+    needs: release-tst
+    uses: ./.github/workflows/_template_release_solution.yml
+    with:
+      environment: prd
+    secrets: inherit

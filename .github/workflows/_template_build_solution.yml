@@ -1,0 +1,60 @@
+name: _Build Solution
+    
+on:
+  workflow_call:
+    inputs:
+      environments:
+          required: true
+          type: string
+          description: 'A commaseperated list of environments to build for. E.g., "dev,tst,prd"'
+        
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUNBUFFERED: 1
+      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+      VSO_FORCE_UTF8_OUTPUT: true
+      TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
+      CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}
+
+    steps: 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r automation/resources/requirements.txt
+
+      - name: Build parameter files
+        run: python -u automation/scripts/utils_build_parameter_file.py --environments ${{ inputs.environments }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 'Build Metadata .dacpac'
+        run: dotnet build 'solution/core/Metadata.SQLDatabase/Metadata.sqlproj' /p:DSP=Microsoft.Data.Tools.Schema.Sql.SqlDbFabricDatabaseSchemaProvider
+
+      - name: Upload Solution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: solution
+          path: ./solution
+
+      - name: Upload Automation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation
+          path: |
+            ./automation/**

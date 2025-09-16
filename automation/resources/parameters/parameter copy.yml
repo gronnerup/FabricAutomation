@@ -1,0 +1,5 @@
+find_replace:
+    - find_value: "dev-item-id"
+      replace_value:
+          tst: "tst-item-id"
+          prd: "prd-item-id"

@@ -1,0 +1,51 @@
+{
+    "generic": {
+        "merge_type": 2,
+        "is_primary" : true,
+        "environment_name": "dev",
+        "permissions": {
+            "Admin": [
+                {"type": "Group", "id": "00000000-0000-0000-0000-000000000000"}
+            ]
+        },
+        "git_settings" :
+        {
+            "gitProviderDetails": {
+                "gitProviderType": "AzureDevOps",
+                "organizationName": "MyAzureDevOpsOrg",
+                "projectName": "MyAzureDevOpsProject",
+                "repositoryName": "MyAzureDevOpsRepository",
+                "branchName": "main"
+            },
+            "myGitCredentials" : {
+                "source": "ConfiguredConnection",
+                "connection_name" : "MyGitConnectionName-ADO"
+            }
+        }
+    },
+    "layers" : 
+    {
+        "merge_type": 2,
+        "Core": { 
+            "git_directoryName": "solution/core"
+        },
+        "Store": { 
+            "git_directoryName": "solution/store"
+        },
+        "Prepare": { 
+            "git_directoryName": "solution/prepare"
+        },
+        "Ingest": { 
+            "git_directoryName": "solution/ingest"
+        },
+        "Orchestrate": { 
+            "git_directoryName": "solution/orchestrate"
+        },
+        "Model": { 
+            "git_directoryName": "solution/model"
+        },
+        "Present": { 
+            "git_directoryName": "solution/present"
+        }
+    }
+}

@@ -1,0 +1,49 @@
+pr: none
+trigger: none
+
+parameters:
+  - name: environments
+    displayName: Environments
+    type: string
+    default: 'dev,tst,prd'
+
+stages:
+  - ${{ each env in split(parameters.environments, ',') }}:
+    - stage: ${{ env }}
+      displayName: 'Setup ${{ env }}'
+      jobs:
+      
+      - job: Setup_Fabric_${{ env }}
+        displayName: 'Setup Fabric Solution - ${{ env }}'
+        
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        variables:
+          - name: PYTHONIOENCODING
+            value: utf-8
+          - name: PYTHONUNBUFFERED
+            value: 1
+          - name: DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION
+            value: true
+          - name: VSO_FORCE_UTF8_OUTPUT
+            value: true
+          - group: Fabric_Automation
+
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.12'
+          
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+            displayName: 'Install Python dependencies'
+            workingDirectory: '$(Build.SourcesDirectory)/automation/resources'
+
+          - script: python -u automation/scripts/fabric_setup.py --environment ${{ env }}
+            displayName: 'Run Fabric solution setup script'
+            env:
+              FAB_TENANT_ID: $(SPN_TENANT_ID)
+              FAB_SPN_CLIENT_ID: $(SPN_CLIENT_ID)
+              FAB_SPN_CLIENT_SECRET: $(SPN_CLIENT_SECRET)
