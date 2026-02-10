@@ -74,11 +74,11 @@ for environment in environments:
                         "type": item.get("type")
                     }
 
-                    if item.get("type") in {"Lakehouse", "SQLDatabase"}:
+                    if item.get("type") in {"Lakehouse", "SQLDatabase", "Warehouse"}:
                         item_details = fabcli.get_item(f"/{workspace_name_escaped}.Workspace/{item.get('displayName')}.{item.get('type')}", retry_count=2)
                         fabric_item.update({
-                            "connectionString": item_details.get("properties").get("connectionString") if item.get("type") == "SQLDatabase" else item_details.get("properties").get("sqlEndpointProperties").get("connectionString") ,
-                            "databaseName": item_details.get("properties").get("databaseName") if item.get("type") == "SQLDatabase" else None,
+                            "connectionString": item_details.get("properties").get("connectionString") if item.get("type") != "Lakehouse" else item_details.get("properties").get("sqlEndpointProperties").get("connectionString") ,
+                            "databaseName": item_details.get("properties").get("databaseName") if item.get("type") == "SQLDatabase" else item_details.get("displayName") if item.get("type") == "Warehouse" else None,
                             "serverFqdn": item_details.get("properties").get("serverFqdn") if item.get("type") == "SQLDatabase" else None,
                             "sqlEndpointId": item_details.get("properties").get("sqlEndpointProperties").get("id") if item.get("type") == "Lakehouse" else None,
                         })
@@ -89,7 +89,7 @@ for environment in environments:
                 if layer_definition.get("items"):
                     for item_type, items in layer_definition.get("items").items():
                         for item in items: 
-                            if item.get("connection_name") and item_type in {"Lakehouse", "SQLDatabase"}:
+                            if item.get("connection_name") and item_type in {"Lakehouse", "SQLDatabase", "Warehouse"}:
                                 connection_name = item.get("connection_name").format(layer=layer_name, environment=environment)
                                 if fabcli.connection_exists(connection_name):
                                     connection = fabcli.get_item(f".connections/{connection_name}.Connection")

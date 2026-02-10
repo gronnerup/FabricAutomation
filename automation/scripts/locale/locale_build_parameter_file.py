@@ -22,7 +22,7 @@ args = ["--environments", environments,
         "--client_secret", env_credentials.get("client_secret")
         ]
 
-process = subprocess.Popen(['python', '-u', script_path] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+process = subprocess.Popen([sys.executable, '-u', script_path] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
 
 # Print the output line by line as it is generated
 for line in process.stdout:

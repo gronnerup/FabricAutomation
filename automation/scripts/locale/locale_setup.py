@@ -26,7 +26,7 @@ for environment in environments:
             "--github_pat", env_credentials.get("github_pat")
             ]
 
-    process = subprocess.Popen(['python', '-u', script_path] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+    process = subprocess.Popen([sys.executable, '-u', script_path] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
 
     # Print the output line by line as it is generated
     for line in process.stdout:

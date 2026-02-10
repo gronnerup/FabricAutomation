@@ -252,3 +252,28 @@ def poll_operation_status(operation_id):
             return None
     
     return None  # Operation timed out or failed
+
+def generate_connection_string(workspace_name, item_type, database, client_id, client_secret):
+    print(f"Generating connection string for {item_type} '{database}' in workspace '{workspace_name}'...")
+    workspace_name_escaped = workspace_name.replace("/", "\\/")
+    sqldb_item = get_item(f"/{workspace_name_escaped}.Workspace/{database}.{item_type}")
+    print(sqldb_item)
+    if item_type == "SQLDatabase":
+        server = sqldb_item.get('properties').get('serverFqdn')
+        database = sqldb_item.get("properties").get("databaseName")
+    elif item_type == "Lakehouse":
+        server = sqldb_item.get("properties").get('sqlEndpointProperties').get('connectionString')  
+    else:
+        server = sqldb_item.get('properties').get('connectionString')
+
+    connection_string = (
+        f"Server={server};"
+        f"Database={database};"
+        f"Authentication=Active Directory Service Principal;"
+        f"User Id={client_id};"
+        f"Password={client_secret};"
+        f"Encrypt=True;"
+        f"Connection Timeout=60;"
+    )
+
+    return connection_string

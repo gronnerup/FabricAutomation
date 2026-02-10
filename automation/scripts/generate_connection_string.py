@@ -35,21 +35,22 @@ env_definition = misc.merge_json(main_json, env_json)
 
 solution_name = env_definition.get("name")
 workspace_name = solution_name.format(layer=layer, environment=environment)
-workspace_name_escaped = workspace_name.replace("/", "\\/")
-sqldb_item = fabcli.get_item(f"/{workspace_name_escaped}.Workspace/{database}.SQLDatabase")
 
-# Example: You may want to adjust the server/database names per environment
-server = sqldb_item.get('properties').get('serverFqdn')
-database = sqldb_item.get("properties").get("databaseName")
+item_type = None
+for env_item_type in env_definition.get("layers").get(layer).get("items"):
+    if env_item_type in ["Warehouse","SQLDatabase"]:
+        for item in env_definition.get("layers").get(layer).get("items").get(env_item_type):
+            item_name = item.get("item_name")
+            if item_name == database:
+                item_type = env_item_type
+                break 
 
-connection_string = (
-    f"Server={server};"
-    f"Database={database};"
-    f"Authentication=Active Directory Service Principal;"
-    f"User Id={client_id};"
-    f"Password={client_secret};"
-    f"Encrypt=True;"
-    f"Connection Timeout=60;"
+connection_string = fabcli.generate_connection_string(
+    workspace_name=workspace_name,
+    item_type=item_type,
+    database=database,
+    client_id=client_id,
+    client_secret=client_secret
 )
 
 with open(args.output_file, "w") as f:
